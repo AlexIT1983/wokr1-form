@@ -1,12 +1,10 @@
-//  Задание 1 (4.Формы)
+//  Задание 1 (вариант 2, Yup and Hook Form)(4.Формы)
 
-import { useState, useRef, useEffect } from 'react'; // подключаем хук useState useRef
+import { useRef, useEffect } from 'react'; // подключаем хук useState useRef
 import { Field } from './components/field/field';
-import {
-	emailValidator,
-	passwordMinValitator,
-	passwordSymbolsValidator,
-} from './validators'; // валидатор почты и паролей
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { registrationFormScheme } from './registration-form-scheme'; // подключаем нашу схему yup
 
 import styles from './App.module.css';
 
@@ -14,20 +12,23 @@ import styles from './App.module.css';
 
 // Компонент App
 export const App = () => {
-	const [email, setEmail] = useState('');
-	const [password, setPassword] = useState('');
-	const [passcheck, setPasscheck] = useState('');
-
-	const [isEmailValid, setIsEmailValid] = useState(false);
-	const [isPasswordValid, setIsPasswordValid] = useState(false);
-	const [isPasscheckValid, setIsPasscheckValid] = useState(false);
-
-	// проверяем валидность всем формы
-	const isFormValid = isEmailValid && isPasswordValid && isPasscheckValid;
+	const {
+		register,
+		handleSubmit,
+		trigger,
+		formState: { touchedFields, isValid, errors },
+	} = useForm({
+		defaultValues: {
+			email: '',
+			password: '',
+			passcheck: '',
+		},
+		resolver: yupResolver(registrationFormScheme),
+		mode: 'onTouched',
+	});
 
 	// укажем нашу функцию для обработки отправки формы
-	const onSubmit = (event) => {
-		event.preventDefault();
+	const onSubmit = ({ email, password }) => {
 		console.log({ email, password });
 	};
 
@@ -35,51 +36,38 @@ export const App = () => {
 	// используем useEffect для переключения фокуса
 
 	useEffect(() => {
-		if (isEmailValid) {
+		if (isValid) {
 			submitButtonRef.current.focus();
 		}
-	});
+	}, [isValid]);
 
 	// сделаем обработчик для изменения полей ввода
 
 	return (
 		<div className={styles.app}>
-			<form onSubmit={onSubmit}>
+			<form onSubmit={handleSubmit(onSubmit)}>
 				<Field
 					type="text"
-					name={'email'}
 					placeholder="Почта"
-					value={email}
-					setValue={setEmail}
-					setIsValid={setIsEmailValid}
-					validators={[emailValidator]}
+					error={errors.email?.message}
+					{...register('email')}
 				/>
 				<Field
 					type="password"
-					name={'password'}
 					placeholder="Пароль"
-					value={password}
-					setValue={setPassword}
-					setIsValid={setIsPasswordValid}
-					validators={[passwordMinValitator, passwordSymbolsValidator]}
+					error={errors.password?.message}
+					{...register('password', {
+						onChange: () => touchedFields.passcheck && trigger('passcheck'),
+					})}
 				/>
 				<Field
 					type="password"
-					name={'passcheck'}
 					placeholder="Повтор пароля"
-					value={passcheck}
-					setValue={setPasscheck}
-					setIsValid={setIsPasscheckValid}
-					validators={[
-						(value) => (value === password ? null : 'Пароли не совпадают'),
-					]}
-					dependencies={{ password }}
-					forceValidation={(value) =>
-						value.length > 0 && value.length >= password.length
-					}
+					error={errors.passcheck?.message}
+					{...register('passcheck')}
 				/>
 
-				<button ref={submitButtonRef} type="submit" disabled={!isFormValid}>
+				<button ref={submitButtonRef} type="submit" disabled={!isValid}>
 					Зарегистрироваться
 				</button>
 			</form>
